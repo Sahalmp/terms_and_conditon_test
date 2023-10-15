@@ -16,6 +16,7 @@ final StateProvider<bool> isListeningProvider = StateProvider<bool>((ref) {
 final StateProvider<String> hindiTermsProvider = StateProvider<String>((ref) {
   return "";
 });
-final StateProvider<bool> isHindiButtonClickedProvider = StateProvider<bool>((ref) {
+final StateProvider<bool> isHindiButtonClickedProvider =
+    StateProvider<bool>((ref) {
   return false;
 });

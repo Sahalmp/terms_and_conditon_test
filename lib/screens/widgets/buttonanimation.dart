@@ -74,7 +74,7 @@ class _ButtonAnimationState extends State<ButtonAnimation>
     }
   }
 
-  void _tapUp(TapUpDetails details) {
-    _controller.reverse();
-  }
+  // void _tapUp(TapUpDetails details) {
+  //   _controller.reverse();
+  // }
 }

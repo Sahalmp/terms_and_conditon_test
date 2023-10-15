@@ -9,19 +9,21 @@ import '../../service/ml_kit_service.dart';
 import 'micanimation.dart';
 import 'rightalignedbutton.dart';
 
+final _formKey = GlobalKey<FormState>();
+
+// ignore: must_be_immutable
 class AddEditWidget extends ConsumerWidget {
   final TermsAndConditionsModel? term;
 
   final MlkitService mlkitService = MlkitService();
 
   AddEditWidget({this.term, super.key});
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
+  late TextEditingController textEditingController;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final TextEditingController textEditingController =
-        ref.watch(textEditingControllerProvider);
+    textEditingController = ref.watch(textEditingControllerProvider);
 
+    final TermsNotifier termsNotifier = ref.watch(termsProvider.notifier);
     bool isListening = ref.watch(isListeningProvider);
 
     String hindiText = ref.watch(hindiTermsProvider);
@@ -29,25 +31,15 @@ class AddEditWidget extends ConsumerWidget {
     if (term != null) {
       textEditingController.text = term!.value;
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ListTile(
-            minLeadingWidth: 0,
-            title: Text(
-              "${term == null ? "Add" : "Edit"} Terms and Conditions",
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            )),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Form(
-            key: _formKey,
+
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildAddEditHeading(context),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
             child: Column(
               children: [
                 Row(
@@ -84,7 +76,6 @@ class AddEditWidget extends ConsumerWidget {
                               ref.read(isListeningProvider.notifier).state =
                                   true;
                               if (!isListening) {
-                                print("hello");
                                 isListening = true;
                                 await startListening(
                                     textEditingController, speech, ref);
@@ -117,47 +108,69 @@ class AddEditWidget extends ConsumerWidget {
               ],
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: isListening
-                      ? null
-                      : () {
-                          if (_formKey.currentState!.validate()) {
-                            TermsAndConditionsModel? updatedTerm;
-
-                            if (term != null) {
-                              updatedTerm = TermsAndConditionsModel(
-                                id: term!.id,
-                                value: textEditingController.text,
-                                createdAt: term!.createdAt,
-                              );
-                            }
-
-                            final newTerm = TermsAndConditionsModel(
-                              value: textEditingController.text,
-                              // Add the Hindi translation if available
-                            );
-
-                            ref
-                                .read(termsProvider.notifier)
-                                .addUpdateTerms(updatedTerm ?? newTerm);
-
-                            Navigator.pop(context);
-                          }
-                        },
-                  child: const Text("Confirm"),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+          _buildConfirmButton(isListening, termsNotifier, context),
+          const SizedBox(
+            height: 20,
+          )
+        ],
+      ),
     );
+  }
+
+  Padding _buildConfirmButton(
+      bool isListening, TermsNotifier termsNotifier, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 45,
+              child: ElevatedButton(
+                onPressed: isListening
+                    ? null
+                    : () {
+                        if (_formKey.currentState!.validate()) {
+                          TermsAndConditionsModel? updatedTerm;
+
+                          if (term != null) {
+                            updatedTerm = TermsAndConditionsModel(
+                              id: term!.id,
+                              value: textEditingController.text,
+                              createdAt: term!.createdAt,
+                            );
+                          }
+
+                          final newTerm = TermsAndConditionsModel(
+                            value: textEditingController.text,
+                          );
+                          termsNotifier.addUpdateTerms(updatedTerm ?? newTerm);
+
+                          Navigator.pop(context);
+                        }
+                      },
+                child: const Text("Confirm"),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  ListTile _buildAddEditHeading(BuildContext context) {
+    return ListTile(
+        minLeadingWidth: 0,
+        title: Text(
+          "${term == null ? "Add" : "Edit"} Terms and Conditions",
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ));
   }
 
   Future<void> startListening(
@@ -169,7 +182,6 @@ class AddEditWidget extends ConsumerWidget {
         }
       },
     );
-    print(available);
     if (available) {
       speech.listen(
         onResult: (result) {
@@ -190,10 +202,12 @@ class AddEditWidget extends ConsumerWidget {
 
   void gethindiText(
       WidgetRef ref, TextEditingController textEditingController) async {
-    ref.read(isHindiButtonClickedProvider.notifier).state = true;
+    if (_formKey.currentState!.validate()) {
+      ref.read(isHindiButtonClickedProvider.notifier).state = true;
 
-    final hindiTranslation =
-        await mlkitService.translateText(textEditingController.text);
-    ref.read(hindiTermsProvider.notifier).state = hindiTranslation;
+      final hindiTranslation =
+          await mlkitService.translateText(textEditingController.text);
+      ref.read(hindiTermsProvider.notifier).state = hindiTranslation;
+    }
   }
 }
